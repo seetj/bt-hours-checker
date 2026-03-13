@@ -258,7 +258,10 @@ def process_billing(df, bt_contacts_df=None):
         st.warning("⚠️ No completed Direct Service BT rows found.")
         return None
 
-    filtered[units_col] = pd.to_numeric(filtered[units_col], errors="coerce").fillna(0)
+    appt_status_col = next((c for c in filtered.columns if "appointment" in c.lower() and "status" in c.lower()), None)
+    if appt_status_col:
+        filtered = filtered[filtered[appt_status_col].astype(str).str.strip().str.lower() == "active"].copy()
+        filtered[units_col] = pd.to_numeric(filtered[units_col], errors="coerce").fillna(0)
 
     if not bt_col:
         candidates = [col_map[k] for k in col_map if any(x in k for x in ["name", "client", "patient"])]
@@ -312,6 +315,7 @@ def process_billing(df, bt_contacts_df=None):
     summary["Total Hours"]             = summary["Total Units"] / 4
     summary["Hours Remaining to 1500"] = HOUR_GOAL - summary["Total Hours"]
     summary = summary[["BT Name", "Phone", "Email", "Total Units", "Total Hours", "Hours Remaining to 1500"]]
+    summary = summary[summary["Total Hours"] > 0]
     summary = summary.sort_values("BT Name").reset_index(drop=True)
 
     return summary, match_log
