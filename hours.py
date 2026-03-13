@@ -3,12 +3,10 @@ import pandas as pd
 import io
 from difflib import SequenceMatcher
 from openpyxl import Workbook
-from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-from openpyxl.utils import get_column_letter
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="Aloha Billing Processor",
+    page_title="BT Hours Tracker",
     page_icon="🏝️",
     layout="wide",
 )
@@ -186,7 +184,7 @@ hr { border-color: #2a2d3a; }
 """, unsafe_allow_html=True)
 
 # ── Header ────────────────────────────────────────────────────────────────────
-st.markdown('<div class="main-title">🏝️ Aloha Billing Processor</div>', unsafe_allow_html=True)
+st.markdown('<div class="main-title">BT Hours Tracker</div>', unsafe_allow_html=True)
 st.markdown(
     f'<div class="subtitle">AlohaABA Export  →  Direct Service BT Hours Report'
     f'&nbsp;&nbsp;·&nbsp;&nbsp;Goal: {HOUR_GOAL:,} hrs / BT</div>',
@@ -326,101 +324,24 @@ def build_excel(summary):
     ws = wb.active
     ws.title = "BT Hours Summary"
 
-    hdr_font   = Font(name="Arial", bold=True, color="FFFFFF", size=11)
-    hdr_fill   = PatternFill("solid", start_color="1a1d27".upper())
-    total_font = Font(name="Arial", bold=True, size=11)
-    total_fill = PatternFill("solid", start_color="1E2130")
-    goal_fill  = PatternFill("solid", start_color="1C3327")
-    cell_font  = Font(name="Arial", size=11)
-    center = Alignment(horizontal="center", vertical="center")
-    left   = Alignment(horizontal="left",   vertical="center")
-    thin   = Side(style="thin", color="2A2D3A")
-    border = Border(left=thin, right=thin, top=thin, bottom=thin)
-
     if has_contacts:
-        headers    = ["BT Name", "Phone", "Email", "Total Units", "Total Hours", "Hrs Remaining to 1,500"]
-        col_widths = [30, 18, 30, 14, 14, 24]
-        num_cols   = 6
-        sum_u, sum_h = "D", "E"
+        headers = ["BT Name", "Phone", "Email", "Total Units", "Total Hours", "Hours Remaining to 1500"]
     else:
-        headers    = ["BT Name", "Total Units", "Total Hours", "Hrs Remaining to 1,500"]
-        col_widths = [30, 14, 14, 24]
-        num_cols   = 4
-        sum_u, sum_h = "B", "C"
+        headers = ["BT Name", "Total Units", "Total Hours", "Hours Remaining to 1500"]
 
-    last_col = chr(64 + num_cols)
-
-    # Title row
-    ws.merge_cells(f"A1:{last_col}1")
-    t = ws["A1"]
-    t.value     = "Aloha Billing — Direct Service BT Hours Report"
-    t.font      = Font(name="Arial", bold=True, size=14, color="7EE8A2")
-    t.fill      = PatternFill("solid", start_color="0F1117")
-    t.alignment = center
-    ws.row_dimensions[1].height = 30
-
-    # Subtitle row
-    ws.merge_cells(f"A2:{last_col}2")
-    g = ws["A2"]
-    g.value     = f"Goal: {HOUR_GOAL:,} hrs/BT  ·  Hours = Units ÷ 4  ·  Filtered: Direct Service BT, Completed = Yes"
-    g.font      = Font(name="Arial", italic=True, size=9, color="555555")
-    g.fill      = PatternFill("solid", start_color="0F1117")
-    g.alignment = center
-    ws.row_dimensions[2].height = 14
-
-    ws.append([])
-
-    # Header row
     ws.append(headers)
-    header_row = ws.max_row
-    for col, h in enumerate(headers, 1):
-        cell       = ws.cell(row=header_row, column=col, value=h)
-        cell.font  = hdr_font
-        cell.fill  = hdr_fill
-        cell.alignment = center
-        cell.border    = border
-    ws.row_dimensions[header_row].height = 22
 
-    # Data rows
-    data_start = header_row + 1
     for _, row in summary.iterrows():
         if has_contacts:
-            ws.append([row["BT Name"], row["Phone"], row["Email"],
-                       row["Total Units"], row["Total Hours"], row["Hours Remaining to 1500"]])
+            ws.append([
+                row["BT Name"], row["Phone"], row["Email"],
+                row["Total Units"], row["Total Hours"], row["Hours Remaining to 1500"]
+            ])
         else:
-            ws.append([row["BT Name"], row["Total Units"],
-                       row["Total Hours"], row["Hours Remaining to 1500"]])
-        r = ws.max_row
-        for col in range(1, num_cols + 1):
-            cell = ws.cell(row=r, column=col)
-            cell.font      = cell_font
-            cell.border    = border
-            cell.alignment = center if col > 1 else left
-            if col >= num_cols - 1:
-                cell.number_format = "0.00"
-            if col == num_cols:
-                cell.fill = goal_fill
-
-    # Totals row
-    data_end = ws.max_row
-    ws.append(["TOTAL"] + [""] * (num_cols - 3) + [
-        f"=SUM({sum_u}{data_start}:{sum_u}{data_end})",
-        f"=SUM({sum_h}{data_start}:{sum_h}{data_end})",
-        ""
-    ])
-    total_row = ws.max_row
-    for col in range(1, num_cols + 1):
-        cell = ws.cell(row=total_row, column=col)
-        cell.font      = total_font
-        cell.fill      = total_fill
-        cell.border    = border
-        cell.alignment = center if col > 1 else left
-        if col == num_cols - 1:
-            cell.number_format = "0.00"
-    ws.row_dimensions[total_row].height = 22
-
-    for i, w in enumerate(col_widths, 1):
-        ws.column_dimensions[get_column_letter(i)].width = w
+            ws.append([
+                row["BT Name"], row["Total Units"],
+                row["Total Hours"], row["Hours Remaining to 1500"]
+            ])
 
     buf = io.BytesIO()
     wb.save(buf)
